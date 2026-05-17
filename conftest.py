@@ -6,8 +6,8 @@ from playwright.async_api import (
     Page as AsyncPage,
     APIRequestContext as AsyncAPIRequestContext,
 )
+from api import FinnhubClient
 from utils.env_config import EnvConfig
-from playwright.async_api import Playwright as AsyncPlaywright
 import subprocess
 import time
 
@@ -82,65 +82,13 @@ def start_server():
 
 
 @pytest.fixture(scope="session")
-async def finnhub_request(playwright: AsyncPlaywright) -> AsyncAPIRequestContext:
-    """
-    Fixture providing API request context for Finnhub API (ASYNC).
-
-    Creates a session-scoped API context that points to Finnhub API
-    with the authentication token included in headers.
-
-    Returns:
-        Async APIRequestContext configured for Finnhub API
-    """
-    # Use Finnhub API base URL
-    finnhub_api_url = "https://finnhub.io/api/v1"
-
-    if not FINNHUB_KEY:
-        print(
-            "[WARN] FINNHUB_KEY not configured. API calls will fail without authentication."
-        )
-
-    print(f"[INFO] Creating Finnhub API context at: {finnhub_api_url}")
-
-    async with async_playwright() as p:
-        context = await p.request.new_context(
-            base_url=finnhub_api_url,
-            extra_http_headers={"X-Finnhub-Token": FINNHUB_KEY} if FINNHUB_KEY else {},
-        )
-        yield context
-        await context.dispose()
+def finnhub_client():
+    return FinnhubClient()
 
 
 @pytest.fixture(scope="session")
-async def api_price(finnhub_request: AsyncAPIRequestContext) -> dict:
-    """
-    Fixture to fetch stock quote data from Finnhub API (ASYNC).
-
-    Fetches the stock price data once per session and reuses it across all tests.
-
-    Returns:
-        Dictionary containing stock quote data:
-        - c: current price
-        - h: high price
-        - l: low price
-        - o: open price
-        - pc: previous close price
-        - t: timestamp
-    """
-    try:
-        print(f"[INFO] Fetching quote for symbol: {SYMBOL}")
-        response = await finnhub_request.get(f"/quote?symbol={SYMBOL}")
-
-        if not response.ok:
-            print(f"[WARN] API Error: {response.status} - {response.text}")
-            return {}
-
-        data = await response.json()
-        print(f"[OK] Quote fetched successfully for {SYMBOL}: ${data.get('c', 'N/A')}")
-        return data
-    except Exception as e:
-        print(f"[ERR] Error fetching quote: {e}")
-        return {}
+def api_price(finnhub_client):
+    return finnhub_client.get_quote(EnvConfig.symbol())
 
 
 @pytest.fixture
