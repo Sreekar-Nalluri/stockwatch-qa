@@ -1,5 +1,5 @@
 [project]
-name = "playwright-finnhub"
+name = "stockwatch-qa"
 version = "1.0.0"
 description = "Playwright automation for custom UI dashboard using finnhub APIs"
 requires-python = ">=3.8"
