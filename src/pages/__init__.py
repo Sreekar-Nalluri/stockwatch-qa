@@ -21,4 +21,3 @@ Example:
         def get_stock_price(self) -> str:
             return self.page.text_content(self.stock_price_locator)
 """
-

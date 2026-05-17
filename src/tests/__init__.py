@@ -14,4 +14,3 @@ Example:
         price = dashboard.get_stock_price()
         assert price is not None
 """
-

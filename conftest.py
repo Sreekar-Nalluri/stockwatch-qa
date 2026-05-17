@@ -1,5 +1,4 @@
 import pytest
-import os
 import sys
 from pathlib import Path
 from playwright.async_api import (
@@ -7,15 +6,13 @@ from playwright.async_api import (
     Page as AsyncPage,
     APIRequestContext as AsyncAPIRequestContext,
 )
+from utils.env_config import EnvConfig
 from playwright.async_api import Playwright as AsyncPlaywright
-import subprocess, time
+import subprocess
+import time
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-# Import custom config loader
-from utils.env_config import EnvConfig
-from utils.pages_loader import PageLoader
 
 # Initialize environment variable loading
 env_config = EnvConfig()
@@ -66,7 +63,7 @@ def start_server():
             stderr=subprocess.DEVNULL,
         )
         time.sleep(1)
-        print(f"[OK] HTTP server started on port 8080")
+        print("[OK] HTTP server started on port 8080")
         yield
     except Exception as e:
         print(f"[ERR] Failed to start HTTP server: {e}")
@@ -76,10 +73,10 @@ def start_server():
             try:
                 proc.terminate()
                 proc.wait(timeout=5)
-                print(f"[OK] HTTP server terminated")
+                print("[OK] HTTP server terminated")
             except subprocess.TimeoutExpired:
                 proc.kill()
-                print(f"[OK] HTTP server killed (force)")
+                print("[OK] HTTP server killed (force)")
             except Exception as e:
                 print(f"[WARN] Error terminating server: {e}")
 
@@ -263,12 +260,6 @@ async def async_api():
         )
         yield context
         await context.dispose()
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """Clean up session files when pytest session finishes."""
-    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "main")
-
 
 # ===== PYTEST HOOKS =====
 

@@ -106,11 +106,10 @@ def test_required_environment_variable():
     try:
         # This will succeed if FINNHUB_KEY is set
         api_key = EnvConfig.get_required("FINNHUB_KEY")
-        print(f"✓ FINNHUB_KEY is configured")
+        print("✓ FINNHUB_KEY is configured")
         assert api_key is not None
     except ValueError as e:
         # This would be raised if FINNHUB_KEY is not in runtime env,
         # config/.env, or config/.env.local
         print(f"⚠ {e}")
         pytest.skip("FINNHUB_KEY not configured")
-

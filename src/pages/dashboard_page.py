@@ -32,11 +32,29 @@ class DashboardPage:
         self.stock_cards = page.locator(".stock-card")
         self.stock_cards_loading = page.locator(".stock-card.loading-shimmer")
 
+        # Card details locators
+        self.card_values_locators = {"time_stamp": "timestamp",
+                                     "symbol": "symbol",
+                                     "current_price": "current-price",
+                                     "price_change": "price-change",
+                                     "open_price": "open-price",
+                                     "prev_close": "prev-close",
+                                     "day_high": "day-high",
+                                     "day_low": "day-low"}
+        self.card_label = ".card-label"
+
         # ===== DETAIL TABLE LOCATORS =====
         self.detail_section = page.locator("#detail-section")
         self.detail_tbody = page.locator("#detail-tbody")
         self.detail_rows = page.locator("tbody tr")
-
+        self.details_section = {"symbol": ".td-sym",
+                                "current_price": "td:nth-child(2)",
+                                "open_price": "td:nth-child(3)",
+                                "day_high": "td:nth-child(4)",
+                                "day_low": "td:nth-child(5)",
+                                "prev_close": "td:nth-child(6)",
+                                "price_change": "td:nth-child(7)",
+                                "time_stamp": "td:last-child"}
 
     async def enter_api_key(self) -> None:
         api_key = env_config.finnhub_key()
@@ -47,7 +65,6 @@ class DashboardPage:
 
     async def wait_for_data_load(self, timeout: int = 5000) -> None:
         await self.page.wait_for_timeout(timeout)
-        print(f"[OK] Waited {timeout}ms for data to load")
 
     async def get_market_status(self) -> str:
         """Get the current market status text.
@@ -57,24 +74,6 @@ class DashboardPage:
         """
         text = await self.status_text.text_content()
         return text.strip() if text else ""
-
-    async def get_status_dot_class(self) -> str:
-        """Get the status dot CSS classes.
-
-        Returns:
-            CSS class string (should contain 'open' or 'closed')
-        """
-        css_class = await self.status_dot.get_attribute("class")
-        return css_class or ""
-
-    async def is_status_open(self) -> bool:
-        """Check if market status is OPEN.
-
-        Returns:
-            True if market is open, False otherwise
-        """
-        status = await self.get_market_status()
-        return "OPEN" in status
 
     # ===== ERROR HANDLING METHODS =====
 
@@ -100,137 +99,37 @@ class DashboardPage:
         count = await self.stock_cards.count()
         return count
 
-    async def is_loading(self) -> bool:
-        """Check if loading shimmer is visible.
+    async def get_first_card_values(self) -> dict:
+        card_values = {}
+        for key, value in self.card_values_locators.items():
+            card_values[key] = await self.stock_cards.first.get_by_test_id(value).text_content()
+        card_values["label"] = await self.stock_cards.first.locator(self.card_label).text_content()
+        assert card_values, "no values found in card"
+        return card_values
 
-        Returns:
-            True if loading animation is showing
-        """
-        count = await self.stock_cards_loading.count()
-        return count > 0
+    async def get_first_details_row_values(self) -> dict:
+        details = {}
+        for key, value in self.details_section.items():
+            details[key] = await self.detail_rows.first.locator(value).text_content()
+        return details
 
-    async def get_first_card_symbol(self) -> str:
-        symbol_locator = self.page.locator(".stock-card:first-child [data-testid='symbol']")
-        text = await symbol_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_price(self) -> str:
-        price_locator = self.page.locator(".stock-card:first-child [data-testid='current-price']")
-        text = await price_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_change(self) -> str:
-        change_locator = self.page.locator(".stock-card:first-child [data-testid='price-change']")
-        text = await change_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_open_price(self) -> str:
-        open_locator = self.page.locator(".stock-card:first-child [data-testid='open-price']")
-        text = await open_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_high_price(self) -> str:
-        high_locator = self.page.locator(".stock-card:first-child [data-testid='day-high']")
-        text = await high_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_low_price(self) -> str:
-        low_locator = self.page.locator(".stock-card:first-child [data-testid='day-low']")
-        text = await low_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_first_card_prev_close(self) -> str:
-        prev_close_locator = self.page.locator(".stock-card:first-child [data-testid='prev-close']")
-        text = await prev_close_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_nth_card_symbol(self, index: int) -> str:
-        symbol_locator = self.page.locator(f".stock-card:nth-child({index}) [data-testid='symbol']")
-        text = await symbol_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_nth_card_price(self, index: int) -> str:
-        price_locator = self.page.locator(f".stock-card:nth-child({index}) [data-testid='current-price']")
-        text = await price_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_nth_card_change(self, index: int) -> str:
-        change_locator = self.page.locator(f".stock-card:nth-child({index}) [data-testid='price-change']")
-        text = await change_locator.text_content()
-        return text.strip() if text else ""
+    async def get_first_card_price(self):
+        return await self.stock_cards.first.get_by_test_id('current-price').text_content()
 
     async def get_detail_table_rows_count(self) -> int:
         count = await self.detail_rows.count()
         return count
 
-    async def is_detail_section_visible(self) -> bool:
-        return await self.detail_section.is_visible()
+    async def is_detail_section_visible(self):
+        assert await self.detail_section.is_visible(), "details section not loaded"
 
-    async def get_table_cell_value(self, row_index: int, column_index: int) -> str:
-        cell = self.page.locator(f"tbody tr:nth-child({row_index + 1}) td:nth-child({column_index + 1})")
-        text = await cell.text_content()
-        return text.strip() if text else ""
-
-    async def get_aapl_table_current_price(self) -> str:
-        price_locator = self.page.locator("[data-testid='table-current-AAPL']")
-        text = await price_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_aapl_table_change(self) -> str:
-        change_locator = self.page.locator("[data-testid='table-change-AAPL']")
-        text = await change_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_msft_table_current_price(self) -> str:
-        price_locator = self.page.locator("[data-testid='table-current-MSFT']")
-        text = await price_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_msft_table_change(self) -> str:
-        change_locator = self.page.locator("[data-testid='table-change-MSFT']")
-        text = await change_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_googl_table_current_price(self) -> str:
-        price_locator = self.page.locator("[data-testid='table-current-GOOGL']")
-        text = await price_locator.text_content()
-        return text.strip() if text else ""
-
-    async def get_googl_table_change(self) -> str:
-        change_locator = self.page.locator("[data-testid='table-change-GOOGL']")
-        text = await change_locator.text_content()
-        return text.strip() if text else ""
-
-    async def verify_data_loaded(self) -> bool:
-        """Verify that data has been successfully loaded.
-
-        Returns:
-            True if data is loaded, False otherwise
-        """
-        # Check if market status is set
-        status = await self.get_market_status()
-        if not status or status == "checking...":
-            return False
-
-        # Check if last updated is set
-        last_updated = await self.get_last_updated()
-        if not last_updated or last_updated == "—":
-            return False
-
-        # Check if cards are loaded
-        cards_count = await self.get_stock_cards_count()
-        if cards_count == 0:
-            return False
-
-        return True
-
-    async def complete_ui_workflow(self):
+    async def verify_dashboard_is_loaded(self):
         market_status = await self.get_market_status()
         last_updated = await self.get_last_updated()
         cards_count = await self.get_stock_cards_count()
         table_rows = await self.get_detail_table_rows_count()
         aapl_price = await self.get_first_card_price()
-            
+
         is_valid = (
             market_status in ["MARKET OPEN", "MARKET CLOSED"] and
             last_updated != "—" and
@@ -238,5 +137,31 @@ class DashboardPage:
             table_rows >= 3 and
             "$" in aapl_price
         )
-        assert is_valid, f"Workflow failed"
+        assert is_valid, "Dashboard failed to load"
         assert cards_count >= 3, f"Need at least 3 cards, got: {cards_count}"
+
+    @staticmethod
+    async def verify_stock_card_details_are_loaded(card_details):
+        assert card_details["symbol"] == "AAPL", f"AAPL symbol not found, got {card_details['symbol']}"
+        assert card_details["time_stamp"], f"Time stamp not found, got {card_details['time_stamp']}"
+        assert card_details["label"] == "NYSE / NASDAQ", f"NYSE / NASDAQ label not found: {card_details['label']}"
+        assert card_details["current_price"], f"Price should contain $ with value, got {card_details['current_price']}"
+        assert card_details["price_change"], f"Price change should be displayed, got {card_details['price_change']}"
+        assert "▲" in card_details["price_change"] or "▼" in card_details["price_change"] or "—" in card_details["price_change"], \
+            f"should have indicator (▲/▼/—), got {card_details['price_change']}"
+        assert card_details["open_price"], f"Open price should contain $ with value, got {card_details['open_price']}"
+        assert card_details["prev_close"], f"Previous close price should contain $ with value, got {card_details['prev_close']}"
+        assert card_details["day_high"], f"Day high should contain $ with value, got {card_details['day_high']}"
+        assert card_details["day_low"], f"Day low should contain $ with value, got {card_details['day-low']}"
+
+    async def verify_details_row_values(self, details_row):
+        table_rows = await self.get_detail_table_rows_count()
+        card_values = await self.get_first_card_values()
+        assert table_rows >= 3, f"Detail table should have at least 3 rows, got: {table_rows}"
+        for key, value in details_row.items():
+            if key == "price_change":
+                assert details_row[key] in card_values[key], \
+                    f"Price change in details {details_row[key]} not equal to card value {card_values[key]}"
+            else:
+                assert details_row[key] == card_values[key], \
+                    f"card value {card_values[key]} not equal to details row value {details_row[key]}"
