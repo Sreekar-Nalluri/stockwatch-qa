@@ -1,6 +1,7 @@
 .idea
 
 config/.env.local
+
 test-results
 
 .playwright-mcp
