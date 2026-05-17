@@ -14,7 +14,9 @@ dependencies = [
     "pytest-html>=3.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.0.0",
-    "pytest-json-report>=1.5.0"
+    "pytest-json-report>=1.5.0",
+    "flake8==7.3.0",
+    "black==26.5.0"
 ]
 
 [tool.pytest.ini_options]

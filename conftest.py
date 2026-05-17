@@ -2,8 +2,12 @@ import pytest
 import os
 import sys
 from pathlib import Path
-from playwright.async_api import async_playwright
-from playwright.sync_api import Page, APIRequestContext, Playwright, Browser, BrowserContext
+from playwright.async_api import (
+    async_playwright,
+    Page as AsyncPage,
+    APIRequestContext as AsyncAPIRequestContext,
+)
+from playwright.async_api import Playwright as AsyncPlaywright
 import subprocess, time
 
 # Add src to path for imports
@@ -26,76 +30,94 @@ BROWSER_TYPE = EnvConfig.get("BROWSER_TYPE", "chromium")  # Default browser type
 def pytest_addoption(parser):
     """Add command-line options for pytest."""
     # Note: --browser option is already provided by pytest-playwright
-    # We only add --browser-channel if it doesn't exist
+    # only add --browser-channel if it doesn't exist
     try:
         parser.getgroup("playwright").addoption(
             "--browser-channel",
             action="store",
             default=None,
-            help="Browser channel to use (e.g., msedge, chromium)"
+            help="Browser channel to use (e.g., msedge, chromium)",
         )
     except (ValueError, AttributeError):
         # Option might already exist or group doesn't exist, that's okay
         pass
 
+
 @pytest.fixture(scope="session", autouse=True)
 def start_server():
-    """Start HTTP server for dashboard.html"""
-    # Find the dashboard directory
+    """Start HTTP server for dashboard.html with proper lifecycle management"""
     project_root = Path(__file__).parent
     dashboard_dir = project_root / "dashboard"
 
-    # If dashboard dir doesn't exist, just serve from project root
     if not dashboard_dir.exists():
         dashboard_dir = project_root
-        print(f"ℹ Dashboard directory not found, using project root: {project_root}")
+        print(
+            f"[INFO] Dashboard directory not found, using project root: {project_root}"
+        )
     else:
-        print(f"ℹ Starting HTTP server in: {dashboard_dir}")
+        print(f"[INFO] Starting HTTP server in: {dashboard_dir}")
 
+    proc = None
     try:
         proc = subprocess.Popen(
             ["python", "-m", "http.server", "8080"],
             cwd=str(dashboard_dir),
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
-        time.sleep(1)  # Let it start
+        time.sleep(1)
+        print(f"[OK] HTTP server started on port 8080")
         yield
-        proc.terminate()
     except Exception as e:
-        print(f"⚠️  Failed to start HTTP server: {e}")
+        print(f"[ERR] Failed to start HTTP server: {e}")
         yield
+    finally:
+        if proc:
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+                print(f"[OK] HTTP server terminated")
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                print(f"[OK] HTTP server killed (force)")
+            except Exception as e:
+                print(f"[WARN] Error terminating server: {e}")
+
 
 @pytest.fixture(scope="session")
-def finnhub_request(playwright: Playwright) -> APIRequestContext:
+async def finnhub_request(playwright: AsyncPlaywright) -> AsyncAPIRequestContext:
     """
-    Fixture providing API request context for Finnhub API.
+    Fixture providing API request context for Finnhub API (ASYNC).
 
     Creates a session-scoped API context that points to Finnhub API
     with the authentication token included in headers.
 
     Returns:
-        APIRequestContext configured for Finnhub API
+        Async APIRequestContext configured for Finnhub API
     """
     # Use Finnhub API base URL
     finnhub_api_url = "https://finnhub.io/api/v1"
 
     if not FINNHUB_KEY:
-        print("⚠️  WARNING: FINNHUB_KEY not configured. API calls will fail without authentication.")
+        print(
+            "[WARN] FINNHUB_KEY not configured. API calls will fail without authentication."
+        )
 
-    print(f"📡 Creating Finnhub API context at: {finnhub_api_url}")
+    print(f"[INFO] Creating Finnhub API context at: {finnhub_api_url}")
 
-    context = playwright.request.new_context(
-        base_url=finnhub_api_url,
-        extra_http_headers={"X-Finnhub-Token": FINNHUB_KEY} if FINNHUB_KEY else {}
-    )
-    yield context
-    context.dispose()
+    async with async_playwright() as p:
+        context = await p.request.new_context(
+            base_url=finnhub_api_url,
+            extra_http_headers={"X-Finnhub-Token": FINNHUB_KEY} if FINNHUB_KEY else {},
+        )
+        yield context
+        await context.dispose()
+
 
 @pytest.fixture(scope="session")
-def api_price(finnhub_request: APIRequestContext) -> dict:
+async def api_price(finnhub_request: AsyncAPIRequestContext) -> dict:
     """
-    Fixture to fetch stock quote data from Finnhub API.
+    Fixture to fetch stock quote data from Finnhub API (ASYNC).
 
     Fetches the stock price data once per session and reuses it across all tests.
 
@@ -109,19 +131,20 @@ def api_price(finnhub_request: APIRequestContext) -> dict:
         - t: timestamp
     """
     try:
-        print(f"📊 Fetching quote for symbol: {SYMBOL}")
-        response = finnhub_request.get(f"/quote?symbol={SYMBOL}")
+        print(f"[INFO] Fetching quote for symbol: {SYMBOL}")
+        response = await finnhub_request.get(f"/quote?symbol={SYMBOL}")
 
         if not response.ok:
-            print(f"⚠️  API Error: {response.status} - {response.text}")
+            print(f"[WARN] API Error: {response.status} - {response.text}")
             return {}
 
-        data = response.json()
-        print(f"✓ Quote fetched successfully for {SYMBOL}: ${data.get('c', 'N/A')}")
+        data = await response.json()
+        print(f"[OK] Quote fetched successfully for {SYMBOL}: ${data.get('c', 'N/A')}")
         return data
     except Exception as e:
-        print(f"❌ Error fetching quote: {e}")
+        print(f"[ERR] Error fetching quote: {e}")
         return {}
+
 
 @pytest.fixture
 def browser_name(request):
@@ -154,10 +177,25 @@ def browser_channel(request):
         return None
 
 
+def check_headless_mode():
+    """
+    Check if the browser is running in headless mode.
+    This can be useful for debugging or conditional logic based on the mode.
+    """
+    headless = EnvConfig.get("HEADLESS", "true").lower() == "true"
+    print(f"[INFO] Running in headless mode: {headless}")
+    return headless
+
+
+# ===== ASYNC PLAYWRIGHT FIXTURES =====
+
+
 @pytest.fixture
-async def browser(browser_name, browser_channel):
-    """Launch browser with specified type and channel."""
-    print(f"🔍 Launching browser: {browser_name} (headless={check_headless_mode()})")
+async def async_browser(browser_name, browser_channel):
+    """Launch browser asynchronously with specified type and channel."""
+    print(
+        f"[INFO] Launching async browser: {browser_name} (headless={check_headless_mode()})"
+    )
 
     async with async_playwright() as p:
         if browser_name == "chromium":
@@ -167,54 +205,64 @@ async def browser(browser_name, browser_channel):
                 headless=check_headless_mode(),
                 channel=browser_channel,
                 slow_mo=50,
-                ignore_default_args=["--disable-extensions"],
             )
         elif browser_name == "firefox":
             browser = await p.firefox.launch(
                 headless=check_headless_mode(),
                 slow_mo=50,
-                ignore_default_args=["--disable-extensions"],
             )
         elif browser_name == "webkit":
             browser = await p.webkit.launch(
                 headless=check_headless_mode(),
                 slow_mo=50,
-                ignore_default_args=["--disable-extensions"],
             )
+        else:
+            raise ValueError(f"Unsupported browser: {browser_name}")
 
         yield browser
         await browser.close()
 
+
 @pytest.fixture
-def browser_type_launch_args():
-    print("🔧 Configuring browser launch arguments...")
-    """Configure browser launch arguments - similar to 'projects' in playwright.config.ts"""
-    return {
-        "headless": check_headless_mode(),  # Set to True for headless, False for headed
-        "slow_mo": 50,  # Slow down operations for debugging
-        # Browser window - force maximized and visible
-        "args": [
-            "--start-maximized",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--disable-web-security",
-            "--disable-features=VizDisplayCompositor",
-            "--force-color-profile=srgb",
-            "--new-window",
-        ],
-        # Downloads
-        "downloads_path": "test-results/downloads/",
-    }
+async def async_context(async_browser):
+    """Create async browser context."""
+    context = await async_browser.new_context()
+    yield context
+    await context.close()
 
 
-def check_headless_mode():
-    """
-    Check if the browser is running in headless mode.
-    This can be useful for debugging or conditional logic based on the mode.
-    """
-    headless = os.environ.get("HEADLESS", "true").lower() == "true"
-    print(f"🔍 Running in headless mode: {headless}")
-    return headless
+@pytest.fixture
+async def async_page(async_context):
+    """Create async page, navigate to BASE_URL, and inject DashboardPage."""
+    page = await async_context.new_page()
+
+    if BASE_URL:
+        print(f"[INFO] Navigating to: {BASE_URL}")
+        await page.goto(BASE_URL)
+
+    yield page
+    await page.close()
+
+
+@pytest.fixture
+async def async_api():
+    """Create async API request context for Finnhub."""
+    finnhub_api_url = "https://finnhub.io/api/v1"
+
+    if not FINNHUB_KEY:
+        print(
+            "[WARN] FINNHUB_KEY not configured. API calls will fail without authentication."
+        )
+
+    print(f"[INFO] Creating async Finnhub API context at: {finnhub_api_url}")
+
+    async with async_playwright() as p:
+        context = await p.request.new_context(
+            base_url=finnhub_api_url,
+            extra_http_headers={"X-Finnhub-Token": FINNHUB_KEY} if FINNHUB_KEY else {},
+        )
+        yield context
+        await context.dispose()
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -222,125 +270,70 @@ def pytest_sessionfinish(session, exitstatus):
     worker_id = os.environ.get("PYTEST_XDIST_WORKER", "main")
 
 
-# JSON reporting hook - uncomment if pytest-json-report is properly installed
-def pytest_json_runtest_metadata(item, call):
-    """Add metadata to individual test runs for JSON reporting."""
-    if call.when == "call":
-        scenario_mark = item.get_closest_marker("scenario")
-        if scenario_mark and scenario_mark.args:
-            return {"scenario": scenario_mark.args[0]}
-    return {}
+# ===== PYTEST HOOKS =====
 
 
 def pytest_runtest_setup(item):
     """Print test description before each test runs"""
     for mark in item.iter_markers("scenario"):
         if mark.args:
-            print(f"\n🧪 Test scenario: {mark.args[0]}")
+            print(f"\n[TEST] Scenario: {mark.args[0]}")
             break
 
 
-# ============================================================================
-# PAGE OBJECT FIXTURES
-# ============================================================================
+# ===== PAGE FIXTURES (ASYNC) =====
+
 
 @pytest.fixture
-def all_pages():
+async def page_with_url(async_page: AsyncPage):
     """
-    Fixture to load all available page objects at once.
+    Fixture providing a page that has already navigated to BASE_URL (ASYNC).
 
     Returns:
-        Dictionary mapping page class names to their classes
+        Async Playwright Page instance navigated to BASE_URL
 
-    Usage in tests:
-        def test_example(all_pages):
-            # Access all pages with their class names
-            dashboard = all_pages['ExamplePage'](page)
-    """
-    pages_dict = load_all_pages()
-    print(f"✓ Loaded {len(pages_dict)} page object(s)")
-    return pages_dict
-
-
-@pytest.fixture
-def pages_loader():
-    """
-    Fixture providing access to the PageLoader utility.
-    
-    Usage in tests:
-        def test_example(page, pages_loader):
-            DashboardPage = pages_loader.get_page('dashboard_page.DashboardPage')
-            dashboard = DashboardPage(page)
-    """
-    return PageLoader
-
-
-@pytest.fixture
-def get_page_fixture():
-    """
-    Fixture providing convenient access to load page classes.
-    
-    Usage in tests:
-        def test_example(get_page_fixture):
-            DashboardPage = get_page_fixture('dashboard_page.DashboardPage')
-    """
-    return get_page
-
-
-@pytest.fixture
-def page_with_url(page: Page):
-    """
-    Fixture providing a page that has already navigated to BASE_URL.
-
-    Returns:
-        Playwright Page instance navigated to BASE_URL
-
-    Usage in tests:
-        def test_example(page_with_url, all_pages):
-            dashboard = all_pages['ExamplePage'](page_with_url)
+    Usage in async tests:
+        async def test_example(page_with_url):
+            dashboard = DashboardPage(page_with_url)
     """
     if BASE_URL:
-        print(f"🌐 Navigating to: {BASE_URL}")
-        page.goto(BASE_URL)
-    return page
+        print(f"[INFO] Navigating to: {BASE_URL}")
+        await async_page.goto(BASE_URL)
+    return async_page
 
 
 @pytest.fixture
-def test_context(page: Page, all_pages, finnhub_request: APIRequestContext):
+async def test_context(async_page: AsyncPage, async_api: AsyncAPIRequestContext):
     """
-    Unified fixture providing complete test context:
-    - Browser page instance (already at BASE_URL)
+    Unified fixture providing complete test context (ASYNC):
+    - Async browser page instance (already at BASE_URL)
     - All page objects loaded and ready to use
-    - API request context for Finnhub
+    - Async API request context for Finnhub
 
     Returns:
-        Dictionary with keys: 'page', 'pages', 'api'
+        Dictionary with keys: 'page', 'pages', 'api', 'config'
 
-    Usage in tests:
-        def test_example(test_context):
+    Usage in async tests:
+        async def test_example(test_context):
             page = test_context['page']
-            page.goto(test_context['config']['base_url'])
+            api = test_context['api']
 
-            # Use page objects
-            ExamplePage = test_context['pages']['ExamplePage']
-            dashboard = ExamplePage(page)
+            from src.pages.dashboard_page import DashboardPage
+            dashboard = DashboardPage(page)
 
-            # Use API
-            response = test_context['api'].get('/quote?symbol=AAPL')
+            await dashboard.enter_api_key('your-key')
+            response = await test_context['api'].get('/quote?symbol=AAPL')
     """
     if BASE_URL:
-        print(f"🌐 Navigating to: {BASE_URL}")
-        page.goto(BASE_URL)
+        print(f"[INFO] Navigating to: {BASE_URL}")
+        await async_page.goto(BASE_URL)
 
     return {
-        'page': page,
-        'pages': all_pages,
-        'api': finnhub_request,
-        'config': {
-            'base_url': BASE_URL,
-            'finnhub_key': FINNHUB_KEY,
-            'symbol': SYMBOL,
-        }
+        "page": async_page,
+        "api": async_api,
+        "config": {
+            "base_url": BASE_URL,
+            "finnhub_key": FINNHUB_KEY,
+            "symbol": SYMBOL,
+        },
     }
-
-

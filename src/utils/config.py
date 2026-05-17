@@ -40,7 +40,7 @@ class EnvConfig:
         3. config/.env.local
         """
         # Get the project root (one level up from the src directory)
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent.parent.parent
         config_dir = project_root / "config"
 
         # Files to try, in order
