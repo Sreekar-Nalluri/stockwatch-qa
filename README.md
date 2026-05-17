@@ -1,4 +1,4 @@
-# playwright-finnhub
+# stockwatch-qa
 
 A **Python + Playwright** automation framework for validating real-time stock data in a custom-built UI dashboard. The dashboard fetches live prices via the **Finnhub API**, and this framework validates both the **UI layer** (via Playwright browser automation) and the **API layer** (via the official `finnhub` Python package) to ensure data accuracy and dashboard correctness.
 
