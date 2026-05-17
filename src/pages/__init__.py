@@ -1,5 +1,5 @@
 """
-Page objects for UI automation.
+Page objects for ui automation.
 
 Page helper classes should be defined in this folder.
 Each page helper file contains a class with locators and action methods.
