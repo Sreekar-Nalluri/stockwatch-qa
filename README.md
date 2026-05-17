@@ -4,6 +4,105 @@ A **Python + Playwright** automation framework for validating real-time stock da
 
 ---
 
+## 🗂️ Project Structure
+
+```
+stockwatch-qa/
+├── config/
+│   ├── .env              # Shared non-secret defaults (committed)
+│   └── .env.local        # Your secrets — NEVER committed
+├── dashboard/
+│   └── dashboard.html    # Custom stock dashboard UI
+├── src/
+│   ├── api/
+│   │   └── finnhub_client.py   # finnhub Python package wrapper
+│   └── utils/
+│       ├── config.py           # EnvConfig — typed env var accessors
+│       └── pages_loader.py     # Page Object loader
+├── tests/
+│   ├── api/              # Pure Python API validation tests
+│   └── ui/               # Playwright browser tests
+├── conftest.py           # Fixtures: server, browser, API client
+├── mcp.json              # Playwright MCP configuration
+└── pyproject.toml        # Dependencies and project metadata
+```
+
+---
+
+## Playwright MCP — AI-Assisted UI Test Generation
+
+[Playwright MCP](https://github.com/microsoft/playwright-mcp) lets AI assistants (Claude, Copilot, etc.) control a real browser and **generate Playwright tests** by observing the live dashboard UI.
+
+### Install Playwright MCP
+
+```bash
+npm install -g @playwright/mcp
+```
+
+### `mcp.json` configuration
+
+Create a `mcp.json` file in your project root (or in your AI editor's config directory):
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser", "chromium",
+        "--headless"
+      ]
+    }
+  }
+}
+```
+
+To run with a **visible browser** (useful when generating tests interactively):
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser", "chromium"
+      ]
+    }
+  }
+}
+```
+
+### Integrate with Claude Desktop
+
+1. Open **Claude Desktop** → Settings → Developer → Edit Config.
+2. Add the `playwright` block from the `mcp.json` above into your `claude_desktop_config.json`.
+3. Restart Claude Desktop.
+4. Claude can now open the dashboard at `http://localhost:8080/dashboard.html`, inspect elements, and write Playwright tests based on what it sees.
+
+### Integrate with VS Code (Copilot / Continue)
+
+1. Install the **Continue** or **Copilot Chat** extension.
+2. Add the `mcp.json` to your `.vscode/` folder or the extension's MCP config path.
+3. The AI assistant will use the Playwright MCP server to browse and generate tests.
+
+### Example: Generate a test with Claude
+
+Start your local dashboard server first:
+
+```bash
+python -m http.server 8080 --directory dashboard/
+```
+
+Then ask Claude (with MCP connected):
+
+> *"Go to http://localhost:8080/dashboard.html, find the stock price element for AAPL, and write a Playwright test that asserts the price is a positive number."*
+
+Claude will navigate the real browser, inspect the DOM, and output a ready-to-use `pytest` test file.
+
+---
+
 ## 🛠️ Installation
 
 ### Prerequisites
@@ -19,8 +118,8 @@ A **Python + Playwright** automation framework for validating real-time stock da
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Sreekar-Nalluri/playwright-finnhub.git
-cd playwright-finnhub
+git clone https://github.com/Sreekar-Nalluri/stockwatch-qa.git
+cd stockwatch-qa
 ```
 
 #### 2. Create a virtual environment
@@ -103,105 +202,6 @@ pytest tests/api/
 
 # Run with a different symbol
 SYMBOL=TSLA pytest
-```
-
----
-
-## Playwright MCP — AI-Assisted UI Test Generation
-
-[Playwright MCP](https://github.com/microsoft/playwright-mcp) lets AI assistants (Claude, Copilot, etc.) control a real browser and **generate Playwright tests** by observing the live dashboard UI.
-
-### Install Playwright MCP
-
-```bash
-npm install -g @playwright/mcp
-```
-
-### `mcp.json` configuration
-
-Create a `mcp.json` file in your project root (or in your AI editor's config directory):
-
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "@playwright/mcp@latest",
-        "--browser", "chromium",
-        "--headless"
-      ]
-    }
-  }
-}
-```
-
-To run with a **visible browser** (useful when generating tests interactively):
-
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "@playwright/mcp@latest",
-        "--browser", "chromium"
-      ]
-    }
-  }
-}
-```
-
-### Integrate with Claude Desktop
-
-1. Open **Claude Desktop** → Settings → Developer → Edit Config.
-2. Add the `playwright` block from the `mcp.json` above into your `claude_desktop_config.json`.
-3. Restart Claude Desktop.
-4. Claude can now open the dashboard at `http://localhost:8080/dashboard.html`, inspect elements, and write Playwright tests based on what it sees.
-
-### Integrate with VS Code (Copilot / Continue)
-
-1. Install the **Continue** or **Copilot Chat** extension.
-2. Add the `mcp.json` to your `.vscode/` folder or the extension's MCP config path.
-3. The AI assistant will use the Playwright MCP server to browse and generate tests.
-
-### Example: Generate a test with Claude
-
-Start your local dashboard server first:
-
-```bash
-python -m http.server 8080 --directory dashboard/
-```
-
-Then ask Claude (with MCP connected):
-
-> *"Go to http://localhost:8080/dashboard.html, find the stock price element for AAPL, and write a Playwright test that asserts the price is a positive number."*
-
-Claude will navigate the real browser, inspect the DOM, and output a ready-to-use `pytest` test file.
-
----
-
-## 🗂️ Project Structure
-
-```
-playwright-finnhub/
-├── config/
-│   ├── .env              # Shared non-secret defaults (committed)
-│   └── .env.local        # Your secrets — NEVER committed
-├── dashboard/
-│   └── dashboard.html    # Custom stock dashboard UI
-├── src/
-│   ├── api/
-│   │   └── finnhub_client.py   # finnhub Python package wrapper
-│   └── utils/
-│       ├── config.py           # EnvConfig — typed env var accessors
-│       └── pages_loader.py     # Page Object loader
-├── tests/
-│   ├── api/              # Pure Python API validation tests
-│   └── ui/               # Playwright browser tests
-├── conftest.py           # Fixtures: server, browser, API client
-├── mcp.json              # Playwright MCP configuration
-└── pyproject.toml        # Dependencies and project metadata
 ```
 
 ---
