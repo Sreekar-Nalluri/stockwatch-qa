@@ -80,13 +80,16 @@ def start_server():
             except Exception as e:
                 print(f"[WARN] Error terminating server: {e}")
 
+
 @pytest.fixture(scope="session")
 def finnhub_client():
     return FinnhubClient()
 
+
 @pytest.fixture(scope="session")
 def api_price(finnhub_client):
     return finnhub_client.get_quote(EnvConfig.symbol())
+
 
 @pytest.fixture
 def browser_name(request):

@@ -111,4 +111,3 @@ async def test_search_empty_query(finnhub_client):
             print(f"[OK] Search 'A' returned: {response}")
     except Exception as e:
         print(f"[WARN] Search error: {e}")
-

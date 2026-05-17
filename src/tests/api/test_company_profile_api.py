@@ -1,7 +1,3 @@
-"""
-Company Profile API Tests - Get company information.
-"""
-
 import pytest
 
 
@@ -12,6 +8,7 @@ async def test_get_company_profile_valid_symbol(finnhub_client):
     assert response is not None
     assert "name" in response, "Company name should be present"
     assert "ticker" in response or "symbol" in response
+
 
 @pytest.mark.asyncio
 @pytest.mark.scenario("API: Company profile has required fields")
@@ -86,4 +83,3 @@ async def test_company_profile_ipo_date(finnhub_client):
         ipo_date = response["ipo"]
         assert ipo_date, "IPO date should exist"
         print(f"[OK] IPO Date: {ipo_date}")
-

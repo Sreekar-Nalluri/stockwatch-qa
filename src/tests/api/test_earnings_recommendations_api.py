@@ -122,4 +122,3 @@ async def test_ipo_calendar_data(finnhub_client):
     if len(response) > 0:
         ipo = response[0]
         print(f"[OK] IPO: {ipo}")
-

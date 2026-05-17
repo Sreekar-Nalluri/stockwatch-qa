@@ -94,7 +94,7 @@ async def test_compare_peers(finnhub_client):
         except:
             pass
 
-    print(f"[OK] Price Comparison:")
+    print("[OK] Price Comparison:")
     for comp_symbol, price in comparison.items():
         print(f"   {comp_symbol}: ${price}")
 
@@ -199,16 +199,16 @@ async def test_technical_analysis_data(finnhub_client):
     # Try to get intraday trades
     try:
         trades = finnhub_client.get_intraday_trades(symbol)
-        print(f"[OK] Intraday data available")
+        print("[OK] Intraday data available")
     except:
-        print(f"[WARN] Intraday data not available")
+        print("[WARN] Intraday data not available")
 
     # Try to get technical indicators
     try:
         indicators = finnhub_client.get_technical_indicators(symbol, indicator="sma")
-        print(f"[OK] Technical indicators available")
+        print("[OK] Technical indicators available")
     except:
-        print(f"[WARN] Technical indicators not available")
+        print("[WARN] Technical indicators not available")
 
 
 @pytest.mark.asyncio
@@ -240,4 +240,3 @@ async def test_market_alert_system(finnhub_client):
         # Price near high
         if current >= high * 0.98:
             print(f"[ALERT] {symbol}: Price near daily high (${current})")
-

@@ -80,7 +80,7 @@ async def test_quote_timestamp(finnhub_client):
     time_diff = current_time - timestamp
 
     assert time_diff < 3600, "Quote should be within 1 hour"
-    print(f"[OK] Quote timestamp is recent (${time_diff} seconds old)")
+    print("[OK] Quote timestamp is recent (${time_diff} seconds old)")
 
 
 @pytest.mark.asyncio
@@ -90,7 +90,6 @@ async def test_get_quote_invalid_symbol(finnhub_client):
     try:
         response = finnhub_client.get_quote("INVALID123")
         # API may return empty or error response
-        print(f"[OK] API returned: {response}")
+        print("[OK] API returned: {response}")
     except Exception as e:
         print(f"[OK] Expected error for invalid symbol: {e}")
-

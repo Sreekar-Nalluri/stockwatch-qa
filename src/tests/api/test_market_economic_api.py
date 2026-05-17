@@ -133,4 +133,3 @@ async def test_country_ticker(finnhub_client):
             print(f"   Sample: {response['data'][0]}")
     except Exception as e:
         print(f"[WARN] Country ticker API: {e}")
-

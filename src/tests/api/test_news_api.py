@@ -101,4 +101,3 @@ async def test_news_article_url(finnhub_client):
             assert url, "URL should exist"
             assert "http" in url.lower(), "URL should contain http"
             print(f"[OK] Valid URL: {url[:60]}...")
-
