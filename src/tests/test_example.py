@@ -82,7 +82,7 @@ def test_environment_variables(get_page_fixture):
     Args:
         get_page_fixture: Fixture providing access to PageLoader
     """
-    from config import EnvConfig
+    from src.utils.env_config import EnvConfig
 
     # Get environment variables with defaults
     base_url = EnvConfig.get("BASE_URL", "http://localhost:8080")

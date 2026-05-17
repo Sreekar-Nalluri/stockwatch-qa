@@ -8,7 +8,7 @@ page objects.
 Replace the locators and methods with those specific to your application.
 """
 
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 
 class ExamplePage:
@@ -19,75 +19,55 @@ class ExamplePage:
         Initialize the page object.
 
         Args:
-            page: Playwright Page instance
+            page: Playwright async Page instance
         """
         self.page = page
-
-    # ========================
-    # Locators (as properties)
-    # ========================
-
-    @property
-    def header_title(self) -> str:
-        """Header title locator."""
-        return "//h1[@class='header-title']"
-
-    @property
-    def search_input(self) -> str:
-        """Search input field locator."""
-        return "input[data-testid='search-input']"
-
-    @property
-    def submit_button(self) -> str:
-        """Submit button locator."""
-        return "button[data-testid='submit-btn']"
-
-    @property
-    def results_container(self) -> str:
-        """Results container locator."""
-        return "div[data-testid='results']"
+        self.header_title = page.locator("h1.header-title")
+        self.search_input = page.locator("input[data-testid='search-input']")
+        self.submit_button = page.locator("button[data-testid='submit-btn']")
+        self.results_container = page.locator("div[data-testid='results']")
 
     # ========================
     # Action Methods
     # ========================
 
-    def get_page_title(self) -> str:
+    async def get_page_title(self) -> str:
         """Get the page title."""
-        return self.page.title()
+        return await self.page.title()
 
-    def get_header_text(self) -> str:
+    async def get_header_text(self) -> str:
         """Get the header text."""
-        return self.page.text_content(self.header_title)
+        return await self.header_title.text_content()
 
-    def fill_search_input(self, text: str) -> None:
+    async def fill_search_input(self, text: str) -> None:
         """
         Fill the search input with text.
 
         Args:
             text: Text to enter in search input
         """
-        self.page.fill(self.search_input, text)
+        await self.search_input.fill(text)
 
-    def click_submit_button(self) -> None:
+    async def click_submit_button(self) -> None:
         """Click the submit button."""
-        self.page.click(self.submit_button)
+        await self.submit_button.click()
 
-    def search_for(self, text: str) -> None:
+    async def search_for(self, text: str) -> None:
         """
         Perform a search action.
 
         Args:
             text: Search term
         """
-        self.fill_search_input(text)
-        self.click_submit_button()
+        await self.fill_search_input(text)
+        await self.click_submit_button()
 
-    def get_results_count(self) -> int:
+    async def get_results_count(self) -> int:
         """Get the number of results displayed."""
-        results = self.page.query_selector_all(self.results_container)
-        return len(results)
+        results = await self.results_container.locator("div").count()
+        return results
 
-    def wait_for_results(self, timeout: int = 5000) -> bool:
+    async def wait_for_results(self, timeout: int = 5000) -> bool:
         """
         Wait for results to appear.
 
@@ -98,8 +78,7 @@ class ExamplePage:
             True if results appear, False otherwise
         """
         try:
-            self.page.wait_for_selector(self.results_container, timeout=timeout)
+            await self.results_container.wait_for(timeout=timeout)
             return True
         except Exception:
             return False
-

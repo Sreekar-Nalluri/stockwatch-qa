@@ -168,7 +168,7 @@ $env:HEADLESS = "false"; pytest
 ### Load Environment Variable
 
 ```python
-from src.utils.config import EnvConfig
+from src.utils.env_config import EnvConfig
 
 # Get with default
 api_key = EnvConfig.get("FINNHUB_KEY")

@@ -1,30 +1,17 @@
-"""
-Simplified UI Test: Complete Dashboard Workflow
-Single test using the complete_ui_workflow() method
-Demonstrates clean async/await pattern with server auto-start and auto-cleanup
-"""
-
 import pytest
+from src.utils.pages_loader import PageLoader
 
 
 @pytest.mark.asyncio
 @pytest.mark.scenario("UI: Dashboard - Complete workflow with comprehensive verification")
 async def test_dashboard_complete_workflow(test_context):
-    """
-    Single unified test: Launch -> Enter Key -> Load -> Verify All
-
-    Features:
-    - Server auto-starts via conftest fixture (session-scoped, autouse=True)
-    - Server auto-closes after all tests via fixture cleanup
-    - Uses complete_ui_workflow() method for streamlined UI interaction
-    - Verifies data is loaded and displayed correctly
-    """
-    from src.pages.dashboard_page import DashboardPage
+    # from src.pages.dashboard_page import DashboardPage
 
     page = test_context['page']
+    pages = PageLoader.load_all_pages()
     api_key = "d83kpmpr01qkm5c8hb1gd83kpmpr01qkm5c8hb20"
 
-    dashboard = DashboardPage(page)
+    # dashboard = DashboardPage(page)
 
     print("\n" + "="*70)
     print("UI TEST: Complete Dashboard Workflow")
@@ -32,7 +19,7 @@ async def test_dashboard_complete_workflow(test_context):
     
     # Execute complete workflow
     print("\nExecuting complete UI workflow...")
-    result = await dashboard.complete_ui_workflow(api_key, wait_time=5000)
+    result = await pages['DashboardPage'].complete_ui_workflow(api_key, wait_time=5000)
     
     # Verify workflow succeeded
     assert result['success'], f"UI workflow failed: {result['error']}"

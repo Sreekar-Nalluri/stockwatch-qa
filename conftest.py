@@ -14,8 +14,8 @@ import subprocess, time
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Import custom config loader
-from utils.config import EnvConfig
-from utils.pages_loader import PageLoader, get_page, load_all_pages
+from utils.env_config import EnvConfig
+from utils.pages_loader import PageLoader
 
 # Initialize environment variable loading
 env_config = EnvConfig()

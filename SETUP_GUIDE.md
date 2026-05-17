@@ -24,7 +24,7 @@ The `EnvConfig` class automatically loads environment variables with this priori
 #### Option A: Simple get() with default
 
 ```python
-from src.utils.config import EnvConfig
+from src.utils.env_config import EnvConfig
 
 # Returns value if found, otherwise returns default
 base_url = EnvConfig.get("BASE_URL", "http://localhost:8080")
@@ -34,7 +34,7 @@ symbol = EnvConfig.get("SYMBOL", "AAPL")
 #### Option B: get_required() - throws error if not found
 
 ```python
-from src.utils.config import EnvConfig
+from src.utils.env_config import EnvConfig
 
 # Raises ValueError if FINNHUB_KEY is not found anywhere
 api_key = EnvConfig.get_required("FINNHUB_KEY")
@@ -276,7 +276,7 @@ class LoginPage:
 ```python
 # src/tests/test_login.py
 import pytest
-from src.utils.config import EnvConfig
+from src.utils.env_config import EnvConfig
 
 
 @pytest.mark.scenario("User can login with valid credentials")
