@@ -1,11 +1,7 @@
 import pytest
 import sys
 from pathlib import Path
-from playwright.async_api import (
-    async_playwright,
-    Page as AsyncPage,
-    APIRequestContext as AsyncAPIRequestContext,
-)
+from playwright.async_api import async_playwright
 from api import FinnhubClient
 from utils.env_config import EnvConfig
 import subprocess
@@ -84,11 +80,6 @@ def start_server():
 @pytest.fixture(scope="session")
 def finnhub_client():
     return FinnhubClient()
-
-
-@pytest.fixture(scope="session")
-def api_price(finnhub_client):
-    return finnhub_client.get_quote(EnvConfig.symbol())
 
 
 @pytest.fixture
@@ -189,90 +180,9 @@ async def async_page(async_context):
     await page.close()
 
 
-@pytest.fixture
-async def async_api():
-    """Create async API request context for Finnhub."""
-    finnhub_api_url = "https://finnhub.io/api/v1"
-
-    if not FINNHUB_KEY:
-        print(
-            "[WARN] FINNHUB_KEY not configured. API calls will fail without authentication."
-        )
-
-    print(f"[INFO] Creating async Finnhub API context at: {finnhub_api_url}")
-
-    async with async_playwright() as p:
-        context = await p.request.new_context(
-            base_url=finnhub_api_url,
-            extra_http_headers={"X-Finnhub-Token": FINNHUB_KEY} if FINNHUB_KEY else {},
-        )
-        yield context
-        await context.dispose()
-
-# ===== PYTEST HOOKS =====
-
-
 def pytest_runtest_setup(item):
     """Print test description before each test runs"""
     for mark in item.iter_markers("scenario"):
         if mark.args:
             print(f"\n[TEST] Scenario: {mark.args[0]}")
             break
-
-
-# ===== PAGE FIXTURES (ASYNC) =====
-
-
-@pytest.fixture
-async def page_with_url(async_page: AsyncPage):
-    """
-    Fixture providing a page that has already navigated to BASE_URL (ASYNC).
-
-    Returns:
-        Async Playwright Page instance navigated to BASE_URL
-
-    Usage in async tests:
-        async def test_example(page_with_url):
-            dashboard = DashboardPage(page_with_url)
-    """
-    if BASE_URL:
-        print(f"[INFO] Navigating to: {BASE_URL}")
-        await async_page.goto(BASE_URL)
-    return async_page
-
-
-@pytest.fixture
-async def test_context(async_page: AsyncPage, async_api: AsyncAPIRequestContext):
-    """
-    Unified fixture providing complete test context (ASYNC):
-    - Async browser page instance (already at BASE_URL)
-    - All page objects loaded and ready to use
-    - Async API request context for Finnhub
-
-    Returns:
-        Dictionary with keys: 'page', 'pages', 'api', 'config'
-
-    Usage in async tests:
-        async def test_example(test_context):
-            page = test_context['page']
-            api = test_context['api']
-
-            from src.pages.dashboard_page import DashboardPage
-            dashboard = DashboardPage(page)
-
-            await dashboard.enter_api_key('your-key')
-            response = await test_context['api'].get('/quote?symbol=AAPL')
-    """
-    if BASE_URL:
-        print(f"[INFO] Navigating to: {BASE_URL}")
-        await async_page.goto(BASE_URL)
-
-    return {
-        "page": async_page,
-        "api": async_api,
-        "config": {
-            "base_url": BASE_URL,
-            "finnhub_key": FINNHUB_KEY,
-            "symbol": SYMBOL,
-        },
-    }

@@ -6,33 +6,26 @@ class DashboardPage:
     def __init__(self, page: Page):
         self.page = page
 
-        # ===== HEADER & STATUS LOCATORS =====
         self.status_dot = page.locator("#status-dot")
         self.status_text = page.locator("#status-text")
 
-        # ===== API KEY BANNER LOCATORS =====
         self.api_key_input = page.locator("#api-key-input")
         self.load_button = page.locator("button:has-text('LOAD DATA')")
 
-        # ===== ERROR MESSAGE LOCATORS =====
         self.error_msg = page.locator("#error-msg")
         self.error_msg_element = page.locator(".error-msg")
 
-        # ===== SEARCH/SYMBOL LOCATORS =====
         self.symbol_input = page.locator("#symbol-input")
         self.add_symbol_button = page.locator("button:has-text('ADD')")
         self.quick_symbols = page.locator(".quick-symbols")
 
-        # ===== REFRESH BAR LOCATORS =====
         self.last_updated = page.locator("#last-updated")
         self.refresh_button = page.locator("button:has-text('↻ REFRESH')")
 
-        # ===== CARDS GRID LOCATORS =====
         self.cards_grid = page.locator("#cards-grid")
         self.stock_cards = page.locator(".stock-card")
         self.stock_cards_loading = page.locator(".stock-card.loading-shimmer")
 
-        # Card details locators
         self.card_values_locators = {"time_stamp": "timestamp",
                                      "symbol": "symbol",
                                      "current_price": "current-price",
@@ -43,7 +36,6 @@ class DashboardPage:
                                      "day_low": "day-low"}
         self.card_label = ".card-label"
 
-        # ===== DETAIL TABLE LOCATORS =====
         self.detail_section = page.locator("#detail-section")
         self.detail_tbody = page.locator("#detail-tbody")
         self.detail_rows = page.locator("tbody tr")
@@ -67,29 +59,8 @@ class DashboardPage:
         await self.page.wait_for_timeout(timeout)
 
     async def get_market_status(self) -> str:
-        """Get the current market status text.
-
-        Returns:
-            Market status text (e.g., "MARKET OPEN", "MARKET CLOSED")
-        """
         text = await self.status_text.text_content()
         return text.strip() if text else ""
-
-    # ===== ERROR HANDLING METHODS =====
-
-    async def get_error_message(self) -> str:
-        if await self.error_msg_element.is_visible():
-            text = await self.error_msg_element.text_content()
-            return text.strip() if text else ""
-        return ""
-
-    async def is_error_visible(self) -> bool:
-        return await self.error_msg_element.is_visible()
-
-    async def clear_error(self) -> None:
-        await self.error_msg_element.evaluate("el => el.style.display = 'none'")
-
-    # ===== STOCK DATA VERIFICATION METHODS =====
 
     async def get_last_updated(self) -> str:
         text = await self.last_updated.text_content()
@@ -165,3 +136,60 @@ class DashboardPage:
             else:
                 assert details_row[key] == card_values[key], \
                     f"card value {card_values[key]} not equal to details row value {details_row[key]}"
+
+    @staticmethod
+    def _extract_price_value(price_str: str) -> float:
+        if not price_str:
+            return 0.0
+        cleaned = price_str.replace('$', '').replace(' ', '').strip()
+        try:
+            return float(cleaned)
+        except ValueError:
+            return 0.0
+
+    @staticmethod
+    def _extract_price_change_value(change_str: str) -> float:
+        if not change_str:
+            return 0.0
+        cleaned = change_str.replace('▲', '').replace('▼', '').replace('$', '').replace(',', '')
+        parts = cleaned.split('(')
+        try:
+            return float(parts[0].strip())
+        except (ValueError, IndexError):
+            return 0.0
+
+    async def get_card_data_for_api_comparison(self) -> dict:
+        card_values = await self.get_first_card_values()
+        symbol = card_values.get("symbol", "").strip()
+        current_price = self._extract_price_value(card_values.get("current_price", ""))
+        open_price = self._extract_price_value(card_values.get("open_price", ""))
+        day_high = self._extract_price_value(card_values.get("day_high", ""))
+        day_low = self._extract_price_value(card_values.get("day_low", ""))
+        prev_close = self._extract_price_value(card_values.get("prev_close", ""))
+        price_change_value = self._extract_price_change_value(card_values.get("price_change", ""))
+
+        return {
+            "symbol": symbol,
+            "c": current_price,
+            "o": open_price,
+            "h": day_high,
+            "l": day_low,
+            "pc": prev_close,
+            "price_change": price_change_value
+        }
+
+    @staticmethod
+    async def compare_card_data_with_api(card_data: dict, api_response: dict):
+        symbol = card_data.get("symbol")
+        api_symbol = api_response.get("symbol", symbol)
+        assert symbol == api_symbol, f"Symbol mismatch: UI={symbol}, API={api_symbol}"
+        assert card_data["c"] == api_response.get("c", 0), \
+            f"Current price mismatch: UI={card_data['c']}, API={api_response.get('c')}"
+        assert card_data["o"] == api_response.get("o", 0), \
+            f"Open price mismatch: UI={card_data['o']}, API={api_response.get('o')}"
+        assert card_data["h"] == api_response.get("h", 0), \
+            f"Day high mismatch: UI={card_data['h']}, API={api_response.get('h')}"
+        assert card_data["l"] == api_response.get("l", 0), \
+            f"Day low mismatch: UI={card_data['l']}, API={api_response.get('l')}"
+        assert card_data["pc"] == api_response.get("pc", 0), \
+            f"Previous close mismatch: UI={card_data['pc']}, API={api_response.get('pc')}"
