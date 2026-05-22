@@ -4,10 +4,9 @@ on:
     branches: [main]
 jobs:
   run_tests:
-    name: Test on ${{ matrix.os }}
+    name: Test on ubuntu-latest
     timeout-minutes: 20
-    runs-on: ${{ matrix.os }}
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
