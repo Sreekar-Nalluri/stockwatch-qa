@@ -3,6 +3,7 @@ from src.api.finnhub_client import FinnhubClient
 
 
 @pytest.mark.asyncio
+@pytest.mark.githubactions
 class TestCompanyProfile:
     @pytest.mark.scenario("API: Get company profile with valid symbol")
     async def test_get_company_profile_valid_symbol(self, finnhub_client):

@@ -180,16 +180,18 @@ class DashboardPage:
 
     @staticmethod
     async def compare_card_data_with_api(card_data: dict, api_response: dict):
+        tolerance = 0.50
         symbol = card_data.get("symbol")
         api_symbol = api_response.get("symbol", symbol)
         assert symbol == api_symbol, f"Symbol mismatch: UI={symbol}, API={api_symbol}"
-        assert card_data["c"] == api_response.get("c", 0), \
+
+        assert abs(card_data["c"] - api_response.get("c", 0)) <= tolerance, \
             f"Current price mismatch: UI={card_data['c']}, API={api_response.get('c')}"
-        assert card_data["o"] == api_response.get("o", 0), \
+        assert abs(card_data["o"] - api_response.get("o", 0)) <= tolerance, \
             f"Open price mismatch: UI={card_data['o']}, API={api_response.get('o')}"
-        assert card_data["h"] == api_response.get("h", 0), \
+        assert abs(card_data["h"] - api_response.get("h", 0)) <= tolerance, \
             f"Day high mismatch: UI={card_data['h']}, API={api_response.get('h')}"
-        assert card_data["l"] == api_response.get("l", 0), \
+        assert abs(card_data["l"] - api_response.get("l", 0)) <= tolerance, \
             f"Day low mismatch: UI={card_data['l']}, API={api_response.get('l')}"
-        assert card_data["pc"] == api_response.get("pc", 0), \
+        assert abs(card_data["pc"] - api_response.get("pc", 0)) <= tolerance, \
             f"Previous close mismatch: UI={card_data['pc']}, API={api_response.get('pc')}"

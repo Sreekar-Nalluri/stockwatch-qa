@@ -40,5 +40,6 @@ addopts = [
     "--tracing=retain-on-failure"
 ]
 markers = [
-    "scenario: Scenario description of the test"
+    "scenario: Scenario description of the test",
+    "githubactions: Marks tests to be run in GitHub Actions",
 ]
