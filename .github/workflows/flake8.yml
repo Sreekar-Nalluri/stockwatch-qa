@@ -5,8 +5,9 @@ on:
 
 jobs:
   test:
+    name: Test on ${{ matrix.os }}
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout Repository

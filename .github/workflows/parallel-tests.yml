@@ -4,8 +4,9 @@ on:
     branches: [main]
 jobs:
   run_tests:
+    name: Test on ${{ matrix.os }}
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout Repository
@@ -51,4 +52,5 @@ jobs:
             retention-days: 3
 
 env:
+  TEST_ENV: 'qa'
   FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}

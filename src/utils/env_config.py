@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 
 
 class EnvConfig:
-    """Manages environment variable loading with fallback strategy."""
-
     _instance = None
     _loaded = False
 
@@ -21,25 +19,30 @@ class EnvConfig:
             EnvConfig._loaded = True
 
     @staticmethod
-    def _load_env_variables():
-        """
-        Load environment variables with fallback strategy.
+    def _resolve_env_file(config_dir: Path) -> Path:
+        test_env = os.environ.get("TEST_ENV", "").strip().lower()
 
-        Priority:
-        1. Runtime environment variables (already in os.environ)
-        2. config/.env
-        3. config/.env.local
-        """
-        # src/utils/env_config.py  →  src/utils  →  src  →  project root
+        if test_env:
+            env_file = config_dir / f".env.{test_env}"
+            print(f"[INFO] TEST_ENV={test_env}, using: {env_file.name}")
+        else:
+            env_file = config_dir / ".env.local"
+            print(f"[INFO] TEST_ENV not set, using default: {env_file.name}")
+
+        return env_file
+
+    @staticmethod
+    def _load_env_variables():
         project_root = Path(__file__).parent.parent.parent
         config_dir = project_root / "config"
 
-        for env_file in [config_dir / ".env", config_dir / ".env.local"]:
-            if env_file.exists():
-                load_dotenv(env_file, override=False)
-                print(f"[OK]   Loaded env from: {env_file}")
-            else:
-                print(f"[WARN] Env file not found: {env_file}")
+        env_file = EnvConfig._resolve_env_file(config_dir)
+        if env_file.exists():
+            load_dotenv(env_file, override=False)
+            print(f"[OK]   Loaded env file: {env_file}")
+        else:
+            print(f"[WARN] Env file not found: {env_file}")
+            print(f"[WARN] Expected path: {env_file.resolve()}")
 
     # ------------------------------------------------------------------
     # Generic accessors
@@ -57,7 +60,7 @@ class EnvConfig:
         Returns:
             The variable's value, or *default*.
         """
-        EnvConfig()           # ensure singleton / loading has run
+        EnvConfig()  # ensure singleton / loading has run
         return os.getenv(key, default)
 
     @staticmethod
@@ -76,11 +79,15 @@ class EnvConfig:
         """
         value = EnvConfig.get(key)
         if not value:
+            env_label = os.environ.get("TEST_ENV", "local")
             raise ValueError(
                 f"Required env var '{key}' not found in runtime env, "
-                "config/.env, or config/.env.local"
+                f"config/.env, or config/.env.{env_label}"
             )
         return value
+    @staticmethod
+    def test_env() -> str:
+        return os.environ.get("TEST_ENV", "local").strip().lower()
 
     @staticmethod
     def finnhub_key() -> str:
@@ -92,7 +99,6 @@ class EnvConfig:
 
         Example::
 
-            from utils.config import EnvConfig
             client = finnhub.Client(api_key=EnvConfig.finnhub_key())
         """
         return EnvConfig.get_required("FINNHUB_KEY")
