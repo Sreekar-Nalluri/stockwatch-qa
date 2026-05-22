@@ -1,12 +1,11 @@
 import pytest
 import sys
-import socket
-import time
-import subprocess
 from pathlib import Path
 from playwright.async_api import async_playwright
 from api import FinnhubClient
 from utils.env_config import EnvConfig
+import subprocess
+import time
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -17,12 +16,14 @@ env_config = EnvConfig()
 # Load configuration variables with fallback strategy
 FINNHUB_KEY = EnvConfig.get("FINNHUB_KEY")
 BASE_URL = EnvConfig.get("BASE_URL", "http://localhost:8080/dashboard.html")
-SYMBOL = EnvConfig.get("SYMBOL", "AAPL")
-BROWSER_TYPE = EnvConfig.get("BROWSER_TYPE", "chromium")
+SYMBOL = EnvConfig.get("SYMBOL", "AAPL")  # Default to AAPL if not specified
+BROWSER_TYPE = EnvConfig.get("BROWSER_TYPE", "chromium")  # Default browser type
 
 
 def pytest_addoption(parser):
     """Add command-line options for pytest."""
+    # Note: --browser option is already provided by pytest-playwright
+    # only add --browser-channel if it doesn't exist
     try:
         parser.getgroup("playwright").addoption(
             "--browser-channel",
@@ -31,59 +32,23 @@ def pytest_addoption(parser):
             help="Browser channel to use (e.g., msedge, chromium)",
         )
     except (ValueError, AttributeError):
+        # Option might already exist or group doesn't exist, that's okay
         pass
 
 
-# ------------------------------------------------------------------
-# Server helpers
-# ------------------------------------------------------------------
-
-def _wait_for_port(host: str, port: int, timeout: int = 15):
-    """
-    Block until the port accepts TCP connections or timeout is reached.
-    Replaces time.sleep(1) which is unreliable on cold CI runners.
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            with socket.create_connection((host, port), timeout=1):
-                return  # port is open and accepting connections
-        except (ConnectionRefusedError, OSError):
-            time.sleep(0.2)
-    raise RuntimeError(
-        f"HTTP server on {host}:{port} did not start within {timeout}s"
-    )
-
-
-def _is_xdist_worker(request) -> bool:
-    """Return True when running inside a pytest-xdist worker process (gw0, gw1 …)."""
-    return hasattr(request.config, "workerinput")
-
-
-# ------------------------------------------------------------------
-# Fixtures
-# ------------------------------------------------------------------
-
 @pytest.fixture(scope="session", autouse=True)
-def start_server(request):
-    """
-    Start HTTP server for dashboard.html with proper lifecycle management.
-    """
+def start_server():
+    """Start HTTP server for dashboard.html with proper lifecycle management"""
     project_root = Path(__file__).parent
     dashboard_dir = project_root / "dashboard"
 
     if not dashboard_dir.exists():
         dashboard_dir = project_root
-        print(f"[INFO] Dashboard directory not found, using project root: {project_root}")
+        print(
+            f"[INFO] Dashboard directory not found, using project root: {project_root}"
+        )
     else:
         print(f"[INFO] Starting HTTP server in: {dashboard_dir}")
-
-    if _is_xdist_worker(request):
-        print("[INFO] xdist worker detected — waiting for server on port 8080 ...")
-        _wait_for_port("localhost", 8080, timeout=15)
-        print("[OK]   Server ready (worker)")
-        yield
-        return
 
     proc = None
     try:
@@ -93,23 +58,23 @@ def start_server(request):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        _wait_for_port("localhost", 8080, timeout=15)
-        print("[OK]   HTTP server started on port 8080")
+        time.sleep(1)
+        print("[OK] HTTP server started on port 8080")
         yield
     except Exception as e:
-        print(f"[ERR]  Failed to start HTTP server: {e}")
+        print(f"[ERR] Failed to start HTTP server: {e}")
         yield
     finally:
         if proc:
             try:
                 proc.terminate()
                 proc.wait(timeout=5)
-                print("[OK]   HTTP server terminated")
+                print("[OK] HTTP server terminated")
             except subprocess.TimeoutExpired:
                 proc.kill()
-                print("[OK]   HTTP server killed (force)")
-            except Exception as ex:
-                print(f"[WARN] Error terminating server: {ex}")
+                print("[OK] HTTP server killed (force)")
+            except Exception as e:
+                print(f"[WARN] Error terminating server: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -125,6 +90,7 @@ def browser_name(request):
     except Exception:
         browser_opt = None
 
+    # Priority: command-line option > environment variable > default
     browser = browser_opt or BROWSER_TYPE or "chromium"
 
     if not browser or (isinstance(browser, str) and browser.strip() == ""):
@@ -147,8 +113,11 @@ def browser_channel(request):
         return None
 
 
-def check_headless_mode() -> bool:
-    """Return True when HEADLESS env var is 'true' (default)."""
+def check_headless_mode():
+    """
+    Check if the browser is running in headless mode.
+    This can be useful for debugging or conditional logic based on the mode.
+    """
     headless = EnvConfig.get("HEADLESS", "true").lower() == "true"
     print(f"[INFO] Running in headless mode: {headless}")
     return headless
@@ -212,7 +181,7 @@ async def async_page(async_context):
 
 
 def pytest_runtest_setup(item):
-    """Print test scenario description before each test runs."""
+    """Print test scenario before each test runs"""
     for mark in item.iter_markers("scenario"):
         if mark.args:
             print(f"\n[TEST] Scenario: {mark.args[0]}")
