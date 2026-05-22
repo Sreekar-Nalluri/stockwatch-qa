@@ -85,6 +85,7 @@ class EnvConfig:
                 f"config/.env, or config/.env.{env_label}"
             )
         return value
+
     @staticmethod
     def test_env() -> str:
         return os.environ.get("TEST_ENV", "local").strip().lower()
