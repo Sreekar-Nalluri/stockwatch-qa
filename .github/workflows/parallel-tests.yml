@@ -38,6 +38,12 @@ jobs:
       - name: Ensure browsers are installed
         run: python -m playwright install --with-deps
 
+      - name: Start HTTP server
+        run: python -m http.server 8080 --directory dashboard &
+
+      - name: Wait for server
+        run: sleep 2
+
       - name: Run playwright parallel tests
         run:  pytest -n 2 --dist=loadfile -m githubactions -v --browser-channel=chrome
 

@@ -5,6 +5,7 @@ from playwright.async_api import async_playwright
 from api import FinnhubClient
 from utils.env_config import EnvConfig
 import subprocess
+import socket
 import time
 
 # Add src to path for imports
@@ -37,44 +38,54 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def start_server():
-    """Start HTTP server for dashboard.html with proper lifecycle management"""
+def start_server(tmp_path_factory, worker_id):
+    def port_open():
+        with socket.socket() as s:
+            return s.connect_ex(("localhost", 8080)) == 0
+
+    if port_open():
+        yield
+        return
+
+    if worker_id != "gw0" and worker_id != "master":
+        for _ in range(20):
+            if port_open():
+                break
+            time.sleep(0.5)
+        else:
+            raise RuntimeError("HTTP server never came up on port 8080")
+        yield
+        return
+
     project_root = Path(__file__).parent
     dashboard_dir = project_root / "dashboard"
-
     if not dashboard_dir.exists():
         dashboard_dir = project_root
-        print(
-            f"[INFO] Dashboard directory not found, using project root: {project_root}"
-        )
-    else:
-        print(f"[INFO] Starting HTTP server in: {dashboard_dir}")
 
-    proc = None
+    proc = subprocess.Popen(
+        ["python", "-m", "http.server", "8080"],
+        cwd=str(dashboard_dir),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    for _ in range(20):
+        if port_open():
+            break
+        time.sleep(0.5)
+    else:
+        proc.terminate()
+        raise RuntimeError("HTTP server failed to start on port 8080")
+
+    print("[OK] HTTP server started on port 8080")
+    yield
+
+    proc.terminate()
     try:
-        proc = subprocess.Popen(
-            ["python", "-m", "http.server", "8080"],
-            cwd=str(dashboard_dir),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        time.sleep(1)
-        print("[OK] HTTP server started on port 8080")
-        yield
-    except Exception as e:
-        print(f"[ERR] Failed to start HTTP server: {e}")
-        yield
-    finally:
-        if proc:
-            try:
-                proc.terminate()
-                proc.wait(timeout=5)
-                print("[OK] HTTP server terminated")
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                print("[OK] HTTP server killed (force)")
-            except Exception as e:
-                print(f"[WARN] Error terminating server: {e}")
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    print("[OK] HTTP server terminated")
 
 
 @pytest.fixture(scope="session")
