@@ -164,7 +164,7 @@ The framework reads your Finnhub API key from a local environment file that is *
 Create `config/.env.local` and add your key:
 
 ```bash
-# config/.env.local
+# config/.env.qa.local
 FINNHUB_KEY=your_actual_api_key_here
 ```
 

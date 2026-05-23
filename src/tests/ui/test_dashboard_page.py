@@ -4,6 +4,7 @@ from src.api.finnhub_client import FinnhubClient
 
 
 @pytest.mark.asyncio
+@pytest.mark.githubactions
 class TestDashboardUI:
     @pytest.mark.scenario("Verify data is getting loaded in UI dashboard")
     async def test_ui_dashboard(self, async_page):
