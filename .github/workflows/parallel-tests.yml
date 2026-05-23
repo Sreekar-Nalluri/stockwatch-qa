@@ -2,6 +2,8 @@ name: Parallel Tests
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 0 * * 0' # every Sunday at midnight
 jobs:
   run_tests:
     name: Test on ubuntu-latest

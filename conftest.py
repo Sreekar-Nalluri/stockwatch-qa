@@ -37,26 +37,20 @@ def pytest_addoption(parser):
         pass
 
 
-@pytest.fixture(scope="session", autouse=True)
-def start_server(tmp_path_factory, worker_id):
-    def port_open():
-        with socket.socket() as s:
-            return s.connect_ex(("localhost", 8080)) == 0
+def _port_open(port: int = 8080) -> bool:
+    with socket.socket() as s:
+        return s.connect_ex(("localhost", port)) == 0
 
-    if port_open():
-        yield
-        return
 
-    if worker_id != "gw0" and worker_id != "master":
-        for _ in range(20):
-            if port_open():
-                break
-            time.sleep(0.5)
-        else:
-            raise RuntimeError("HTTP server never came up on port 8080")
-        yield
-        return
+def _wait_for_port(port: int = 8080, retries: int = 20, delay: float = 0.5) -> bool:
+    for _ in range(retries):
+        if _port_open(port):
+            return True
+        time.sleep(delay)
+    return False
 
+
+def _start_http_server() -> subprocess.Popen:
     project_root = Path(__file__).parent
     dashboard_dir = project_root / "dashboard"
     if not dashboard_dir.exists():
@@ -69,23 +63,39 @@ def start_server(tmp_path_factory, worker_id):
         stderr=subprocess.DEVNULL,
     )
 
-    for _ in range(20):
-        if port_open():
-            break
-        time.sleep(0.5)
-    else:
+    if not _wait_for_port():
         proc.terminate()
         raise RuntimeError("HTTP server failed to start on port 8080")
 
     print("[OK] HTTP server started on port 8080")
-    yield
+    return proc
 
+
+def _stop_http_server(proc: subprocess.Popen) -> None:
     proc.terminate()
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
         proc.kill()
     print("[OK] HTTP server terminated")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def start_server(worker_id):
+    """Start HTTP server - only on master/gw0, others wait. CI starts it externally."""
+    if _port_open():
+        yield
+        return
+
+    if worker_id not in ("master", "gw0"):
+        if not _wait_for_port():
+            raise RuntimeError("HTTP server never came up on port 8080")
+        yield
+        return
+
+    proc = _start_http_server()
+    yield
+    _stop_http_server(proc)
 
 
 @pytest.fixture(scope="session")
