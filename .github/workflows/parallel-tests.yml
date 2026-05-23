@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 0 * * 0' # every Sunday at midnight
+    - cron: '30 15 * * 1-5'
 jobs:
   run_tests:
     name: Test on ubuntu-latest
