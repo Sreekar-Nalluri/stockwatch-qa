@@ -1,5 +1,5 @@
 import pytest
-from src.api.finnhub_client import FinnhubClient
+from stock_dashboard.api.finnhub_client import FinnhubClient
 
 
 @pytest.mark.asyncio

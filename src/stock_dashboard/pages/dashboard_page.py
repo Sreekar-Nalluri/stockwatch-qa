@@ -1,5 +1,5 @@
 from playwright.async_api import Page
-from conftest import env_config
+from utils.env_config import EnvConfig
 
 
 class DashboardPage:
@@ -49,7 +49,7 @@ class DashboardPage:
                                 "time_stamp": "td:last-child"}
 
     async def enter_api_key(self) -> None:
-        api_key = env_config.finnhub_key()
+        api_key = EnvConfig.finnhub_key()
         await self.api_key_input.fill(api_key)
 
     async def click_load_button(self) -> None:

@@ -1,8 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "stockwatch-qa"
 version = "1.0.0"
 description = "Playwright automation for custom UI dashboard using finnhub APIs"
 requires-python = ">=3.8"
+
 dependencies = [
     "finnhub-python>=2.4.20",
     "pytest==9.0.2",
@@ -20,14 +25,23 @@ dependencies = [
     "black==26.5.0"
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
-testpaths = ["src/tests"]
+
+testpaths = ["tests"]
+
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
 addopts = [
     "-v",
     "--tb=short",
@@ -40,6 +54,7 @@ addopts = [
     "--video=retain-on-failure",
     "--tracing=retain-on-failure"
 ]
+
 markers = [
     "scenario: Scenario description of the test",
     "githubactions: Marks tests to be run in GitHub Actions",

@@ -14,8 +14,11 @@ stockwatch-qa/
 ├── dashboard/
 │   └── dashboard.html    # Custom stock dashboard UI
 ├── src/
-│   ├── api/
-│   │   └── finnhub_client.py   # finnhub Python package wrapper
+│   ├── stock_dashboard/
+│   │   ├── api/
+│   │   │   └── finnhub_client.py   # finnhub Python package wrapper
+│   │   └── ui/
+│   │       └── dashboard_page.py   # Page Object for dashboard UI
 │   └── utils/
 │       ├── config.py           # EnvConfig — typed env var accessors
 │       └── pages_loader.py     # Page Object loader
@@ -23,7 +26,7 @@ stockwatch-qa/
 │   ├── api/              # Pure Python API validation tests
 │   └── ui/               # Playwright browser tests
 ├── conftest.py           # Fixtures: server, browser, API client
-├── mcp.json              # Playwright MCP configuration
+├── .mcp.json             # Playwright MCP configuration
 └── pyproject.toml        # Dependencies and project metadata
 ```
 

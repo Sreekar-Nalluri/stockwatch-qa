@@ -32,7 +32,7 @@ class PageLoader:
     @staticmethod
     def _get_pages_dir() -> Path:
         """Get the pages directory path."""
-        pages_dir = Path(__file__).parent.parent / "pages"
+        pages_dir = Path(__file__).parent.parent / "stock_dashboard" / "pages"
         if not pages_dir.exists():
             raise FileNotFoundError(f"Pages directory not found at: {pages_dir}")
         return pages_dir
@@ -66,7 +66,7 @@ class PageLoader:
                 module_name = py_file.stem
 
                 # Import module
-                full_module_name = f"src.pages.{module_name}"
+                full_module_name = f"src.stock_dashboard.pages.{module_name}"
                 module = importlib.import_module(full_module_name)
 
                 # Find all classes in the module that are page objects
