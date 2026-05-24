@@ -34,7 +34,7 @@ stockwatch-qa/
 
 ## Playwright MCP — AI-Assisted UI Test Generation
 
-[Playwright MCP](https://github.com/microsoft/playwright-mcp) lets AI assistants (Claude, Copilot, etc.) control a real browser and **generate Playwright tests** by observing the live dashboard UI.
+[Playwright MCP](https://github.com/microsoft/playwright-mcp) lets AI assistants control a real browser and **generate Playwright tests** by observing the live dashboard UI.
 
 ### Install Playwright MCP
 
@@ -77,12 +77,34 @@ To run with a **visible browser** (useful when generating tests interactively):
 }
 ```
 
-### Integrate with Claude Desktop
+### Integrate with PyCharm / JetBrains IDEs
 
-1. Open **Claude Desktop** → Settings → Developer → Edit Config.
-2. Add the `playwright` block from the `mcp.json` above into your `claude_desktop_config.json`.
-3. Restart Claude Desktop.
-4. Claude can now open the dashboard at `http://localhost:8080/dashboard.html`, inspect elements, and write Playwright tests based on what it sees.
+1. Open PyCharm → **Settings** → **Tools** → **GitHub Copilot** → **Model Context Protocol(MCP)** → click configure
+
+2. Open PyCharm → **Settings** → **Plugins** →  **Marketplace** → Search for "GitHub Copilot" → Install and restart the IDE.
+
+3. Add the MCP server config below in `.mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser", "chromium",
+        "--headless"
+      ]
+    }
+  }
+}
+```
+
+4. Click GitHub Copilot chat icon on the right sidebar to open the chat window.
+
+5. Select Agent and click configure tools icon, scroll down and check playwright to enable it.
+
+6. Now give instructions to the Copilot agent in natural language, (type use playwright mcp in your prompt) and it will use the Playwright MCP server to interact with the dashboard UI and generate tests.
 
 ### Integrate with VS Code (Copilot / Continue)
 
@@ -90,27 +112,13 @@ To run with a **visible browser** (useful when generating tests interactively):
 2. Add the `mcp.json` to your `.vscode/` folder or the extension's MCP config path.
 3. The AI assistant will use the Playwright MCP server to browse and generate tests.
 
-### Example: Generate a test with Claude
-
-Start your local dashboard server first:
-
-```bash
-python -m http.server 8080 --directory dashboard/
-```
-
-Then ask Claude (with MCP connected):
-
-> *"Go to http://localhost:8080/dashboard.html, find the stock price element for AAPL, and write a Playwright test that asserts the price is a positive number."*
-
-Claude will navigate the real browser, inspect the DOM, and output a ready-to-use `pytest` test file.
-
 ---
 
 ## 🛠️ Installation
 
 ### Prerequisites
 
-- Python 3.8 or higher (3.13+ recommended)
+- Python 3.8 or higher (3.12 recommended)
 - pip (Python package installer)
 - Node.js (optional, for Playwright MCP)
 
