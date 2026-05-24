@@ -1,6 +1,6 @@
 import pytest
-from src.utils.pages_loader import PageLoader
-from src.api.finnhub_client import FinnhubClient
+from utils.pages_loader import PageLoader
+from stock_dashboard.api.finnhub_client import FinnhubClient
 
 
 @pytest.mark.asyncio

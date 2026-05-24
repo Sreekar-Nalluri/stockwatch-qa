@@ -2,7 +2,7 @@ import pytest
 import sys
 from pathlib import Path
 from playwright.async_api import async_playwright
-from api import FinnhubClient
+from stock_dashboard.api import FinnhubClient
 from utils.env_config import EnvConfig
 import subprocess
 import socket
